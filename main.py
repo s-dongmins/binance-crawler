@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 import os
 import requests
+import sys
 import time
 
 import numpy as np
@@ -73,6 +74,12 @@ def fetch_klines(start_time):
         raise Exception(f"Failed to retrieve data. Status code: {response.status_code}")
 
 def main():
+    if len(sys.argv) != 2:
+        print("Input End Time: YYYY-MM-DD")
+        return
+    
+    limit = date_to_timestamp(sys.argv[1])
+    
     log = open("log.txt", "a")
 
     print("Starting Fetch")
@@ -82,7 +89,7 @@ def main():
         while True:
             target = date_to_timestamp(sorted(os.listdir("data/BTCUSDT"))[-1].replace(".bin", "")) + 86400000
 
-            if target >= year2024:
+            if target >= limit:
                 print("All data has been fetched")
                 log.write(f"\n{get_time_string()} LOG: All data has been fetched")
                 break
