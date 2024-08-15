@@ -120,9 +120,9 @@ def main():
         write_log(f"Fetching {timestamp_to_date(target)}")
 
 
-        data = []
         fetch = True
         while fetch:
+            data = []
             fetch = False
             try:
                 for i in range(96):
