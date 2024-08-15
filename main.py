@@ -1,7 +1,7 @@
+import argparse
 from datetime import datetime, timezone
 import os
 import requests
-import sys
 import time
 
 import numpy as np
@@ -51,12 +51,12 @@ def get_time_string():
     current = datetime.now(timezone.utc)
     return current.strftime("%Y-%m-%d %H:%M:%S")
 
-def fetch_klines(start_time):
+def fetch_klines(start_time, ticker):
     url = "https://www.binance.com/api/v3/uiKlines"
     params = {
         "startTime": start_time,
         "limit": 900,
-        "symbol": "BTCUSDT",
+        "symbol": ticker,
         "interval": "1s",
     }
 
@@ -72,50 +72,71 @@ def fetch_klines(start_time):
         return data
     else:
         raise Exception(f"Failed to retrieve data. Status code: {response.status_code}")
+    
+def write_log(log, error=False):
+    print(log)
+    if error:
+        log = f"\n{get_time_string()} ERR: " + log
+    else:
+        log = f"\n{get_time_string()} LOG: " + log
+
+    with open('log.txt', "a") as log_file:
+        log_file.write(log)
 
 def main():
-    if len(sys.argv) != 2:
-        print("Input End Time: YYYY-MM-DD")
-        return
+    parser = argparse.ArgumentParser(description="Simple Binance crawler")
     
-    limit = date_to_timestamp(sys.argv[1])
+    parser.add_argument("-s", "--start", required=True, help="Starting point of crawl, format: YYYY-MM-DD (ex: 2024-06-07)")
+    parser.add_argument("-e", "--end", required=True, help="Endpoint of crawl, format: YYYY-MM-DD (ex: 2024-06-24)")
+    parser.add_argument("-t", "--ticker", required=True, help="Ticker of crypto to crawl (ex: BTCUSDT)")
+    parser.add_argument("-i", "--interval", type=float, default=0.7, help="Interval between each fetch (default=0.7)")
     
-    log = open("log.txt", "a")
+    args = parser.parse_args()
 
-    print("Starting Fetch")
-    log.write(f"\n{get_time_string()} LOG: Starting Fetch")
+    write_log(f"Starting Fetch, {args.start} ~ {args.end}, Ticker: {args.ticker}")
 
-    try:
-        while True:
-            target = date_to_timestamp(sorted(os.listdir("data/BTCUSDT"))[-1].replace(".bin", "")) + 86400000
+    start = date_to_timestamp(args.start)
+    end = date_to_timestamp(args.end)
 
-            if target >= limit:
-                print("All data has been fetched")
-                log.write(f"\n{get_time_string()} LOG: All data has been fetched")
-                break
+    if not os.path.exists("data"):
+        os.makedirs("data")
+    if not os.path.exists(f"data/{args.ticker}"):
+        os.makedirs(f"data/{args.ticker}")
 
-            print(f"Fetching {timestamp_to_date(target)}")
-            log.write(f"\n{get_time_string()} LOG: Fetching {timestamp_to_date(target)}")
+    target = start - 86400000
+    done_list = [d.replace(".bin", "") for d in os.listdir(f"data/{args.ticker}")]
+    
+    while True:
+        target += 86400000
 
-            data = []
-            for i in range(96):
-                print(f"{i} / 96")
-                data += fetch_klines(target + (i * 900000))
-                time.sleep(0.5)
+        if timestamp_to_date(target) in done_list:
+            write_log(f"{timestamp_to_date(target)} already fetched. Move on to the next fetch.")
+            continue
 
-            array = np.array(data, dtype=dtype)
-            array.tofile(f'data/BTCUSDT/{timestamp_to_date(target)}.bin')
+        if target >= end:
+            write_log("All data has been fetched")
+            break
 
-            print(f"{timestamp_to_date(target)} Fetched!")
-            log.write(f"\n{get_time_string()} LOG: {timestamp_to_date(target)} Fetched!")
-            print("Wait for 10 seconds")
-            time.sleep(10)
-    except Exception as e:
-        print("Error Occurred!")
-        print(str(e))
-        log.write(f"\n{get_time_string()} ERR: {str(e)}")
+        write_log(f"Fetching {timestamp_to_date(target)}")
 
-    log.close()
+
+        data = []
+        for i in range(96):
+            print(f"{i} / 96")
+            try:
+                data += fetch_klines(target + (i * 900000), args.ticker)
+            except Exception as e:
+                write_log("Error Occurred! Sleep 5min", True)
+                write_log(str(e), True)
+                time.sleep(300)
+            time.sleep(args.interval)
+
+        array = np.array(data, dtype=dtype)
+        array.tofile(f'data/{args.ticker}/{timestamp_to_date(target)}.bin')
+
+        write_log(f"{timestamp_to_date(target)} Fetched!")
+        write_log("Wait for 10 seconds")
+        time.sleep(10)
 
 
 if __name__ == "__main__":
