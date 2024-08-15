@@ -121,15 +121,20 @@ def main():
 
 
         data = []
-        for i in range(96):
-            print(f"{i} / 96")
+        fetch = True
+        while fetch:
+            fetch = False
             try:
-                data += fetch_klines(target + (i * 900000), args.ticker)
+                for i in range(96):
+                    print(f"{i} / 96")
+                    data += fetch_klines(target + (i * 900000), args.ticker)
+                    time.sleep(args.interval)
             except Exception as e:
                 write_log("Error Occurred! Sleep 5min", True)
                 write_log(str(e), True)
+                fetch = True
                 time.sleep(300)
-            time.sleep(args.interval)
+
 
         array = np.array(data, dtype=dtype)
         array.tofile(f'data/{args.ticker}/{timestamp_to_date(target)}.bin')
