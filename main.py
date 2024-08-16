@@ -117,7 +117,7 @@ def main():
             write_log("All data has been fetched")
             break
 
-        write_log(f"Fetching {timestamp_to_date(target)}")
+        write_log(f"Fetching {timestamp_to_date(target)} {args.ticker}")
 
 
         fetch = True
@@ -139,7 +139,7 @@ def main():
         array = np.array(data, dtype=dtype)
         array.tofile(f'data/{args.ticker}/{timestamp_to_date(target)}.bin')
 
-        write_log(f"{timestamp_to_date(target)} Fetched!")
+        write_log(f"{timestamp_to_date(target)} {args.ticker} Fetched!")
         write_log("Wait for 10 seconds")
         time.sleep(10)
 
