@@ -37,19 +37,27 @@ dtype = np.dtype([
     ("taker_base_volume", "f8")
 ])
 
-def date_to_timestamp(date):
+def date_to_timestamp(date: str):
     date_object = datetime.strptime(date, "%Y-%m-%d")
     date_object = date_object.replace(tzinfo=timezone.utc)
     timestamp = int(date_object.timestamp())
     return timestamp * 1000
 
-def timestamp_to_date(timestamp):
+def timestamp_to_date(timestamp: int):
     date_object = datetime.fromtimestamp(timestamp / 1000.0, tz=timezone.utc)
     return date_object.strftime("%Y-%m-%d")
 
 def get_time_string():
     current = datetime.now(timezone.utc)
     return current.strftime("%Y-%m-%d %H:%M:%S")
+
+def date_difference(date1: str, date2: str):
+    date_format = "%Y-%m-%d"
+    d1 = datetime.strptime(date1, date_format)
+    d2 = datetime.strptime(date2, date_format)
+    
+    difference = abs((d2 - d1).days)
+    return difference
 
 def fetch_klines(start_time, ticker):
     url = "https://www.binance.com/api/v3/uiKlines"
@@ -117,7 +125,7 @@ def main():
             write_log("All data has been fetched")
             break
 
-        write_log(f"Fetching {timestamp_to_date(target)} {args.ticker}")
+        write_log(f"Fetching {timestamp_to_date(target)} {args.ticker} ({args.start} ~ {args.end} {date_difference(args.start, timestamp_to_date(target))}/{date_difference(args.start, args.end)})")
 
 
         fetch = True
